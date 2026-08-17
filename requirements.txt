@@ -1,0 +1,8 @@
+python-telegram-bot>=21.0
+aportalsmp>=1.3
+tonnelmp>=1.2
+amrkt>=1.6.0
+aiohttp>=3.9
+APScheduler>=3.10
+python-dotenv>=1.0
+aiosqlite>=0.20
