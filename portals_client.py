@@ -83,6 +83,11 @@ async def get_top_offer(collection_id: str, _retries: int = 2) -> dict[str, Any]
     (лише ~105 колекцій, застарілий - підтверджено 10.07.2026), і не знає
     про новіші подарунки на кшталт "Vice Cream".
 
+    Використовує /all?scope=broad (не /top!) - звичайний /top іноді повертає
+    офер, прив'язаний до конкретної моделі/бекдропу/символу, який не можна
+    закрити випадковим floor-предметом. scope=broad повертає тільки
+    "загальні" офери - підтверджено реальними даними 21.08.2026.
+
     Повертає:
         {"amount": float, "floor_price": float, "total_count": int} або None,
         якщо офери на цю колекцію відсутні.
@@ -91,7 +96,18 @@ async def get_top_offer(collection_id: str, _retries: int = 2) -> dict[str, Any]
     auth = _require_auth()
     import aportalsmp.offers as offers_module
 
-    url = offers_module.API_URL + "collection-offers/" + collection_id + "/top"
+    # ВАЖЛИВО (виправлено 21.08.2026): звичайний ендпоінт /top іноді повертає
+    # офер, прив'язаний до конкретної моделі/бекдропу/символу (поле "scope"
+    # непорожнє) - такий офер НЕ можна закрити випадковим floor-предметом.
+    # /all?scope=broad повертає тільки "загальні" офери (scope повністю
+    # порожній), які підходять під будь-який предмет колекції - підтверджено
+    # реальними даними 21.08.2026.
+    url = (
+        offers_module.API_URL
+        + "collection-offers/"
+        + collection_id
+        + "/all?scope=broad"
+    )
     headers = {**offers_module.HEADERS_MAIN, "Authorization": auth}
     response = await offers_module.fetch(
         method="GET", url=url, headers=headers, impersonate="chrome110"
@@ -119,6 +135,8 @@ async def get_top_offer(collection_id: str, _retries: int = 2) -> dict[str, Any]
     if not offers:
         return None
 
+    # сортуємо явно, а не покладаємось на порядок від API
+    offers.sort(key=lambda o: float(o["amount"]), reverse=True)
     top = offers[0]
     return {
         "amount": float(top["amount"]),
